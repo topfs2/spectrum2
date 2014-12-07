@@ -2,6 +2,7 @@
     <head>
         <script src="js/audiocontext-polyfill.js"></script>
 
+        <script src="js/tween.min.js"></script>
         <script src="js/jquery-2.1.1.js"></script>
         <script src="js/three.js"></script>
         <script src="js/tinycolor.js"></script>
@@ -19,75 +20,9 @@
                 top: 0px;
                 left: 0px;
             }
-
-            body {
-                -webkit-font-smoothing: antialiased;
-            }
-
-            .info {
-                position: absolute;
-                bottom: 50%;
-                left: 20%;
-                right: 20%;
-
-                margin-bottom: 50px;
-
-                font-family: 'Raleway', sans-serif;
-                font-weight: 300;
-                color: white;
-            }
-
-            .title {
-                font-size: 64px;
-                margin-bottom: 20px;
-            }
-
-            .artist {
-                font-size: 36px;
-            }
         </style>
-        <script id="vertexShader" type="x-shader/x-vertex">
-          varying vec2 vUv;
-	        uniform float time;
-	        uniform vec2 resolution;
-
-	        void main()	{
-              vUv = uv;
-              gl_Position = projectionMatrix *
-                            modelViewMatrix *
-                            vec4(position,1.0);
-	        }
-        </script>
-         
-        <script id="fragmentShader" type="x-shader/x-fragment">
-	        uniform float time;
-	        uniform vec2 resolution;
-
-          uniform sampler2D gradient1;
-          uniform sampler2D gradient2;
-
-          uniform float amount;
-          varying vec2 vUv;
-
-          uniform vec3 diffuse;
-
-          void main() {
-              vec2 displacement = vec2(sin(time * 0.5), cos(time * 0.7)) * 0.1;
-
-              vec4 color1 = texture2D(gradient1, vUv * 0.8 + 0.1 + displacement);
-              vec4 color2 = texture2D(gradient2, vUv) * (sin(time * 0.4) * 0.5 + 1.0);
-
-              vec4 color = color1 + color2;
-
-              gl_FragColor = vec4(color.rgb * diffuse, color.a) * amount;
-          }
-        </script>
 
     	<div id="webgl"></div>
-        <div class="info">
-            <div class="title">Chandelier</div>
-            <div class="artist">Sia</div>
-        </div>
-        <script src="js/base.js"></script>
+      <script src="js/base.js"></script>
     </body>
 </html>

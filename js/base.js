@@ -14,7 +14,7 @@ function createBar(r, h, s) {
     var geometry = new THREE.PlaneGeometry(r, r + r2, 1, 3);
 
     var material = new THREE.MeshBasicMaterial({
-        map: THREE.ImageUtils.loadTexture(s),
+        //map: THREE.ImageUtils.loadTexture(s),
         color: new THREE.Color(spectrumColor),
         transparent: true,
     });
@@ -60,11 +60,81 @@ function createBlurredBar(w, h) {
     return group;
 }
 
+
+function createBoxedBar(n, w, h, g, c) {
+    var group = new THREE.Object3D();
+    group.position.y = n * (h + g) * -0.5;
+
+    var bg = new THREE.Object3D();
+    var fg = new THREE.Object3D();
+
+    bg.position.z = -21;
+    group.add(bg);
+    group.add(fg);
+
+    var geometry = new THREE.PlaneGeometry(w, h, 1, 1);
+
+    var bg_material = new THREE.MeshBasicMaterial({
+        map: THREE.ImageUtils.loadTexture("img/border.png"),
+        transparent: true,
+        opacity: 0.7
+    });
+    var fg_material = new THREE.MeshBasicMaterial({
+        map: THREE.ImageUtils.loadTexture("img/fg.png"),
+        color: new THREE.Color(c),
+        transparent: true,
+        opacity: 0.5
+    });
+
+    for (var i = 0; i < n; i++) {
+        var bg_box = new THREE.Mesh(geometry, bg_material);
+        var fg_box = new THREE.Mesh(geometry, fg_material);
+
+        bg_box.position.y = fg_box.position.y = i * (h + g);
+
+        bg.add(bg_box);
+        fg.add(fg_box);
+    }
+
+    var tween;
+    var triggerVisible = 0;
+    group.setHeight = function (e) {
+        var visible = Math.floor(e * n);
+
+        if (visible > triggerVisible) {
+          if (tween) { tween.stop(); }
+          tween = new TWEEN.Tween( { fg_opacity: 1.0, bg_opacity: 0.7 } )
+            .to( { fg_opacity: 0.2, bg_opacity: 0.2 }, 1000 )
+            .easing( TWEEN.Easing.Cubic.InOut )
+            .onUpdate( function () {
+              fg_material.opacity = this.fg_opacity;
+              bg_material.opacity = this.bg_opacity;
+            } )
+            .onComplete(function () {
+              triggerVisible = 0;
+            })
+            .start();
+
+            triggerVisible = visible;
+        }
+
+        for (var i = 0; i < n; i++) {
+          var bg_box = bg.children[i];
+          var fg_box = fg.children[i];
+          bg_box.visible = fg_box.visible = visible > i;
+        }
+    };
+
+    group.setHeight(0);
+
+    return group;
+}
+
 function createSpectrum(n, w, h, g, create) {
     var group = new THREE.Object3D();
 
     for (var i = 0; i < n; i++) {
-        var bar = create(w, h);
+        var bar = create(w, h, i);
         bar.position.x = i * (w + g);
         group.add(bar);
     }
@@ -84,10 +154,10 @@ function createSpectrum(n, w, h, g, create) {
 }
 
 (function () {
-    var w = window.innerWidth;
-    var h = window.innerHeight;
-    var w2 = w * 0.5;
-    var h2 = h * 0.5;
+    var w2 = Math.floor(window.innerWidth * 0.5);
+    var h2 = Math.floor(window.innerHeight * 0.5);
+    var w = w2 * 2;
+    var h = h2 * 2;
 
 	var webglEl = document.getElementById('webgl');
 
@@ -104,20 +174,26 @@ function createSpectrum(n, w, h, g, create) {
     $(".info").css("color", spectrumColor);
 
     var MP3_PATH = "https://a.tumblr.com/tumblr_n6k5kd8E0W1sadul5o1.mp3";
-    var NUM_BANDS = 128;
+    var NUM_BANDS = 16;
     var SMOOTHING = 0.5;
 
     var sound = true;
     analyser = sound ? new AudioAnalyser(MP3_PATH, NUM_BANDS, SMOOTHING) : { start: function () { }, audio: $("<div />")[0] };
 
+
+    spectrumColors = [ ]
+    for (var i = 0; i < NUM_BANDS; i++) {
+      var hsl = { h: (i / NUM_BANDS) * 360.0, s: 0.8, l: 0.5 };
+      spectrumColors.push(tinycolor(hsl).toRgbString());
+    }
+
     var scene = new THREE.Scene();
 
     var camera = new THREE.OrthographicCamera(-w2, w2, h2, -h2, -1, 1000);
 
-    var spectrum = createSpectrum(NUM_BANDS, 4, 256, 12, function (w, h) {
-        return createBlurredBar(w, h);
+    var spectrum = createSpectrum(NUM_BANDS, 40, 20, 20, function (w, h, i) {
+        return createBoxedBar(8, w, h, 20, spectrumColors[i]);
     })
-    spectrum.position.x = -w2 + 12;
 
     scene.add(camera);
     scene.add(spectrum);
@@ -143,6 +219,7 @@ function createSpectrum(n, w, h, g, create) {
         t = getDeltaTime();
         var dt = t - oldTime;
 
+        TWEEN.update();
         renderer.render(scene, camera);
     }
 
